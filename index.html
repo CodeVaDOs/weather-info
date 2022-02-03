@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Weather info</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+  body {
+  font-family: sans-serif;
+}
+
+.container {
+  display: flex;
+  gap: 10px;
+}
+
+.weather-item {
+  width: 100%;
+  height: 120px;
+  background-color: #3484F0;
+  
+  color: #fff;
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  font-size: 64px;
+ 
+}
+
+.percent, .celsium, .hPa, .wind {
+  position: relative;
+}
+
+.percent::before {
+  content: '%';
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  font-size: 16px;
+}
+
+.celsium::before {
+  content: '°C';
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  font-size: 16px;
+}
+
+.hPa::before {
+  content: 'hPa';
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  font-size: 16px;
+}
+
+.wind::before {
+  content: 'm/s';
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .container {
+    flex-direction: column;
+  }
+  
+}
+  </style>
+</head>
+<body>
+
+<h2>City: </h2>
+<div class="container">
+  <div class="weather-item temperature celsium">
+    0
+  </div>
+  <div class="weather-item pressure hPa">
+    0
+  </div>
+  <div class="weather-item humidity percent">
+    0
+  </div>
+  <div class="weather-item wind">
+    0
+  </div>
+</div>
+
+<br>
+
+<form onsubmit="getData()">
+  <lable>
+  City name
+  <input id="cname" type="text">
+</lable>
+</form>
+
+<script>
+const apiKey = 'a70f30b237885970bbb75094748dffee';
+
+const humidityDiv = document.querySelector('.humidity')
+const temperatureDiv = document.querySelector('.temperature')
+const pressureDiv = document.querySelector('.pressure')
+const windDiv = document.querySelector('.wind')
+
+const cnameInp = document.querySelector('#cname')
+
+const cityH2 = document.querySelector('h2')
+
+const localStorageCurrent = localStorage.getItem('current');
+
+const current = JSON.parse(localStorageCurrent) || {
+  lat: 54,
+  lon: 15
+}
+
+if (!localStorageCurrent) initGeolocation();
+
+const getWeather = (lat, lon) => {
+  fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=` + apiKey, {
+      "method": "GET"
+    })
+    .then(response => response.json())
+    .then(response => {
+      humidityDiv.textContent = response.main.humidity;
+      temperatureDiv.textContent = Math.round((response.main.temp - 273.15) * 10) / 10;
+
+      cityH2.textContent = 'City: ' + response.name + ', ' + response.sys.country;
+
+      pressureDiv.textContent = response.main.pressure;
+      windDiv.textContent = response.wind.speed;
+      
+      localStorage.setItem('current', JSON.stringify(current));
+    })
+    .catch(err => {
+      console.error(err);
+    });
+}
+
+function getData(e) {
+	event.preventDefault();
+  const cname = cnameInp.value;
+	
+  fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${cname}&limit=1&appid=${apiKey}`)
+    .then(r => r.json())
+    .then(r => {
+      const result = r[0];
+      current.lat = result.lat;
+      current.lon = result.lon;
+      getWeather(result.lat, result.lon)
+    })
+    .catch(e => {
+      console.log(e.message)
+    })
+}
+
+getWeather(current.lat, current.lon);
+setInterval(() => {
+  getWeather(current.lat, current.lon)
+}, 5000)
+
+
+function initGeolocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(success, fail);
+  } else {
+    alert("Sorry, your browser does not support geolocation services.");
+  }
+}
+
+function success(position) {
+  current.lon = position.coords.longitude;
+  current.lat = position.coords.latitude
+  
+  getWeather(current.lat, current.lon);
+}
+
+function fail() {
+  // Could not obtain location
+}
+</script>
+</body>
+</html>
